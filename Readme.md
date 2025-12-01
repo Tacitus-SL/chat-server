@@ -27,9 +27,9 @@ A simple networking application that enables real-time text communication betwee
    Built-in commands provide enhanced control and navigation inside the chat application.
 
 - **Acceptance Criteria:**
-  Commands start with / (e.g., /join, /leave, /msg, /rooms).
-  Unknown commands are gracefully rejected with a clear message.
-  Command processing does not block message flow.
+   - Commands start with / (e.g., /join, /leave, /msg, /rooms).
+   - Unknown commands are gracefully rejected with a clear message.
+   - Command processing does not block message flow.
 
 ## Dependencies
 
@@ -55,7 +55,21 @@ make test
 ```
 
 ## Usage Examples
-
+Start the server:
 ```bash
-./program_name [arguments]
+./server [port]
+```
+
+Connect a client:
+```bash
+./client [server-ip] [port]
+```
+
+Common commands inside the chat:
+```bash
+/join room_name
+/leave
+/rooms
+/msg username Hello!
+/quit
 ```
