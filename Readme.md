@@ -22,7 +22,7 @@ A simple networking application that enables real-time text communication betwee
    - Leaving a room cleanly disconnects the user and broadcasts a status message.
    - Users can list all active rooms.
 
-3.Command System
+3. Command System
 - **Description:**
    Built-in commands provide enhanced control and navigation inside the chat application.
 
