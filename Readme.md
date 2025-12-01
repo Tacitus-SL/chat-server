@@ -1,5 +1,5 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/c-Tbil6P)
-# Text-Based CHat Program
+# Text-Based Chat Program
 
 A simple networking application that enables real-time text communication between multiple users over a local network or the internet. The program allows users to create chat rooms or engage in one-on-one conversations, with features such as username selection, message timestamps, and basic command functionality for actions like joining or leaving chat rooms.
 
@@ -40,8 +40,8 @@ A simple networking application that enables real-time text communication betwee
 
 1. Clone the repository:
 ```bash
-git clone 
-cd project-name
+git clone https://github.com/programming-fundamentals-nup-2025/examproject1-Tacitus-SL.git
+cd examproject1-Tacitus-SL
 ```
 
 2. Build the project:
