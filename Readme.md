@@ -55,21 +55,6 @@ make test
 ```
 
 ## Usage Examples
-Start the server:
 ```bash
-./server [port]
-```
-
-Connect a client:
-```bash
-./client [server-ip] [port]
-```
-
-Common commands inside the chat:
-```bash
-/join room_name
-/leave
-/rooms
-/msg username Hello!
-/quit
+bash ./program_name [arguments]
 ```
