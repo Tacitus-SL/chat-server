@@ -6,21 +6,21 @@ A simple networking application that enables real-time text communication betwee
 ## Features
 
 1. Real-Time Messaging
-   - **Description:**
-     Users can send and receive messages instantly in shared chat rooms or private chats.
-   - **Acceptance Criteria:**
-      - Messages appear immediately for all users in the same room.
-      - Each message includes a timestamp and the sender’s username.
-      - The program handles multiple clients concurrently.
+- **Description:**
+  Users can send and receive messages instantly in shared chat rooms or private chats.
+- **Acceptance Criteria:**
+   - Messages appear immediately for all users in the same room.
+   - Each message includes a timestamp and the sender’s username.
+   - The program handles multiple clients concurrently.
 
 2. Chat Rooms Management
-   - **Description:**
-     Users can create, join, leave, and list available chat rooms.
-   - **Acceptance Criteria:**
-      - A user can create a room with a unique name.
-      - A user can join any existing room.
-      - Leaving a room cleanly disconnects the user and broadcasts a status message.
-      - Users can list all active rooms.
+- **Description:**
+  Users can create, join, leave, and list available chat rooms.
+- **Acceptance Criteria:**
+   - A user can create a room with a unique name.
+   - A user can join any existing room.
+   - Leaving a room cleanly disconnects the user and broadcasts a status message.
+   - Users can list all active rooms.
 
 3.Command System
 - **Description:**
