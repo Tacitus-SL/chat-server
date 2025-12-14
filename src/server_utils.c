@@ -5,6 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 // Определение глобальных массивов
 Client clients[MAX_CLIENTS];
@@ -22,6 +23,8 @@ void init_rooms(void) {
     for (int i = 0; i < MAX_ROOMS; i++) {
         rooms[i].active = 0;
         rooms[i].name[0] = '\0';
+        rooms[i].history.count = 0;
+        rooms[i].history.head = 0;
     }
     // Создаём комнату "lobby" по умолчанию
     strcpy(rooms[0].name, "lobby");
@@ -85,6 +88,44 @@ void broadcast_to_room(const char *room, const char *msg, int exclude_fd) {
     }
 }
 
+void add_message_to_history(const char *room_name, const char *message) {
+    int room_idx = find_room(room_name);
+    if (room_idx < 0) return;
+
+    MessageHistory *hist = &rooms[room_idx].history;
+
+    // Копируем сообщение в циклический буфер
+    strncpy(hist->messages[hist->head], message, BUFFER_SIZE - 1);
+    hist->messages[hist->head][BUFFER_SIZE - 1] = '\0';
+
+    hist->head = (hist->head + 1) % MAX_HISTORY;
+    if (hist->count < MAX_HISTORY) {
+        hist->count++;
+    }
+}
+
+void send_room_history(int client_idx, const char *room_name) {
+    int room_idx = find_room(room_name);
+    if (room_idx < 0) return;
+
+    MessageHistory *hist = &rooms[room_idx].history;
+
+    if (hist->count == 0) {
+        return; // Нет истории
+    }
+
+    send_message(clients[client_idx].fd, "[SERVER] --- Recent messages ---\n");
+
+    // Отправляем сообщения в правильном порядке
+    int start = (hist->head - hist->count + MAX_HISTORY) % MAX_HISTORY;
+    for (int i = 0; i < hist->count; i++) {
+        int idx = (start + i) % MAX_HISTORY;
+        send_message(clients[client_idx].fd, hist->messages[idx]);
+    }
+
+    send_message(clients[client_idx].fd, "[SERVER] --- End of history ---\n");
+}
+
 void handle_setname(int client_idx, const char *username) {
     if (strlen(username) == 0 || strlen(username) >= MAX_USERNAME) {
         send_message(clients[client_idx].fd, "[ERROR] Invalid username length.\n");
@@ -142,9 +183,13 @@ void handle_join(int client_idx, const char *room_name) {
     snprintf(msg, sizeof(msg), "[SERVER] You joined room '%s'\n", room_name);
     send_message(clients[client_idx].fd, msg);
 
+    // Показываем историю сообщений
+    send_room_history(client_idx, room_name);
+
     snprintf(msg, sizeof(msg), "[%s] *** %s joined the room ***\n",
              timestamp, clients[client_idx].username);
     broadcast_to_room(room_name, msg, clients[client_idx].fd);
+    add_message_to_history(room_name, msg);
 }
 
 void handle_leave(int client_idx) {
@@ -235,6 +280,10 @@ void handle_chat_message(int client_idx, const char *content) {
     snprintf(msg, sizeof(msg), "[%s] %s: %s\n",
              timestamp, clients[client_idx].username, content);
 
+    // Сохраняем в историю
+    add_message_to_history(clients[client_idx].current_room, msg);
+
+    // Отправляем всем в комнате, включая отправителя
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (clients[i].fd > 0 &&
             strcmp(clients[i].current_room, clients[client_idx].current_room) == 0) {
@@ -252,8 +301,14 @@ void handle_help(int client_idx) {
     strcat(msg, "  /rooms                  - List all rooms\n");
     strcat(msg, "  /users                  - List users in current room\n");
     strcat(msg, "  /msg <user> <message>   - Send private message\n");
+    strcat(msg, "  /quit                   - Exit the chat\n");
     strcat(msg, "  /help                   - Show this help\n");
     send_message(clients[client_idx].fd, msg);
+}
+
+void handle_quit(int client_idx) {
+    send_message(clients[client_idx].fd, "[SERVER] Goodbye! Disconnecting...\n");
+    handle_disconnect(client_idx);
 }
 
 void handle_client_message(int client_idx, char *buffer) {
@@ -291,6 +346,9 @@ void handle_client_message(int client_idx, char *buffer) {
         else if (strcmp(cmd, "/help") == 0) {
             handle_help(client_idx);
         }
+        else if (strcmp(cmd, "/quit") == 0) {
+            handle_quit(client_idx);
+        }
         else {
             send_message(clients[client_idx].fd, "[ERROR] Unknown command. Type /help for help.\n");
         }
@@ -300,6 +358,10 @@ void handle_client_message(int client_idx, char *buffer) {
 }
 
 void handle_disconnect(int client_idx) {
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(clients[client_idx].addr.sin_addr), ip_str, INET_ADDRSTRLEN);
+    int port = ntohs(clients[client_idx].addr.sin_port);
+
     if (strlen(clients[client_idx].username) > 0) {
         char msg[BUFFER_SIZE];
         char timestamp[32];
@@ -308,6 +370,11 @@ void handle_disconnect(int client_idx) {
         snprintf(msg, sizeof(msg), "[%s] *** %s disconnected ***\n",
                  timestamp, clients[client_idx].username);
         broadcast_to_room(clients[client_idx].current_room, msg, -1);
+
+        // Логирование на сервере
+        printf("Lost connection from %s:%d (user: %s)\n", ip_str, port, clients[client_idx].username);
+    } else {
+        printf("Lost connection from %s:%d (no username set)\n", ip_str, port);
     }
 
     close(clients[client_idx].fd);

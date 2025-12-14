@@ -16,6 +16,7 @@ typedef struct {
 typedef struct {
 	char name[MAX_ROOMNAME];
 	int active;
+	MessageHistory history;  // История сообщений комнаты
 } Room;
 
 // Глобальные массивы (extern - объявление, определение будет в .c файле)
@@ -48,7 +49,12 @@ void handle_list_users(int client_idx);
 void handle_private_message(int client_idx, const char *target, const char *content);
 void handle_chat_message(int client_idx, const char *content);
 void handle_help(int client_idx);
+void handle_quit(int client_idx);
 void handle_client_message(int client_idx, char *buffer);
 void handle_disconnect(int client_idx);
+
+// Управление историей сообщений
+void add_message_to_history(const char *room_name, const char *message);
+void send_room_history(int client_idx, const char *room_name);
 
 #endif // SERVER_UTILS_H
