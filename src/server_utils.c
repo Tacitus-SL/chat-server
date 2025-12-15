@@ -221,6 +221,9 @@ void handle_join(int client_idx, const char *room_name) {
              timestamp, clients[client_idx].username);
     broadcast_to_room(room_name, msg, clients[client_idx].fd);
     add_message_to_history(room_name, msg);
+
+    // Очищаем старую комнату если она пуста
+    cleanup_empty_rooms();
 }
 
 void handle_leave(int client_idx) {
@@ -243,6 +246,9 @@ void handle_leave(int client_idx) {
     snprintf(msg, sizeof(msg), "[%s] *** %s joined the lobby ***\n",
              timestamp, clients[client_idx].username);
     broadcast_to_room("lobby", msg, clients[client_idx].fd);
+
+    // Очищаем пустые комнаты
+    cleanup_empty_rooms();
 }
 
 void handle_list_rooms(int client_idx) {
@@ -288,6 +294,38 @@ void check_inactive_clients(void) {
 
                 send_message(clients[i].fd, "[SERVER] Disconnected due to inactivity.\n");
                 handle_disconnect(i);
+            }
+        }
+    }
+}
+
+int count_users_in_room(const char *room_name) {
+    int count = 0;
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].fd > 0 && strcmp(clients[i].current_room, room_name) == 0) {
+            count++;
+        }
+    }
+    return count;
+}
+
+void cleanup_empty_rooms(void) {
+    for (int i = 0; i < MAX_ROOMS; i++) {
+        if (rooms[i].active) {
+            // Никогда не удаляем комнату "lobby"
+            if (strcmp(rooms[i].name, "lobby") == 0) {
+                continue;
+            }
+
+            // Подсчитываем пользователей в комнате
+            int user_count = count_users_in_room(rooms[i].name);
+
+            if (user_count == 0) {
+                printf("Cleaning up empty room: '%s'\n", rooms[i].name);
+                rooms[i].active = 0;
+                rooms[i].name[0] = '\0';
+                rooms[i].history.count = 0;
+                rooms[i].history.head = 0;
             }
         }
     }
@@ -452,4 +490,7 @@ void handle_disconnect(int client_idx) {
     clients[client_idx].fd = -1;
     clients[client_idx].username[0] = '\0';
     clients[client_idx].current_room[0] = '\0';
+
+    // Очищаем пустые комнаты после отключения
+    cleanup_empty_rooms();
 }

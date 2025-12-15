@@ -13,6 +13,9 @@
 #include "protocol.h"
 #include "server_utils.h"
 
+// Внешнее объявление для доступа к rooms
+extern Room rooms[];
+
 volatile sig_atomic_t running = 1;
 
 void sigint_handler(int sig) {
@@ -98,10 +101,11 @@ int main(int argc, char *argv[]) {
             break;
         }
         if (activity <= 0) {
-            // Проверяем неактивных клиентов каждые 10 секунд
+            // Проверяем неактивных клиентов и очищаем пустые комнаты каждые 10 секунд
             loop_count++;
             if (loop_count >= 10) {
                 check_inactive_clients();
+                cleanup_empty_rooms();
                 loop_count = 0;
             }
             continue;

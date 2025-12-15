@@ -63,4 +63,8 @@ void send_room_history(int client_idx, const char *room_name);
 void update_client_activity(int client_idx);
 void check_inactive_clients(void);
 
+// Управление комнатами
+int count_users_in_room(const char *room_name);
+void cleanup_empty_rooms(void);
+
 #endif // SERVER_UTILS_H
