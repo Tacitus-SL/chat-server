@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -74,6 +75,8 @@ int main(int argc, char *argv[]) {
     printf("Chat server started on port %d\n", port);
     printf("Waiting for connections...\n");
 
+    int loop_count = 0;
+
     while (running) {
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -94,7 +97,15 @@ int main(int argc, char *argv[]) {
             perror("select");
             break;
         }
-        if (activity <= 0) continue;
+        if (activity <= 0) {
+            // Проверяем неактивных клиентов каждые 10 секунд
+            loop_count++;
+            if (loop_count >= 10) {
+                check_inactive_clients();
+                loop_count = 0;
+            }
+            continue;
+        }
 
         // Новое подключение
         if (FD_ISSET(server_fd, &readfds)) {
@@ -108,6 +119,7 @@ int main(int argc, char *argv[]) {
                     if (clients[i].fd == -1) {
                         clients[i].fd = client_fd;
                         clients[i].addr = client_addr;
+                        clients[i].last_activity = time(NULL);
                         added = 1;
 
                         char msg[BUFFER_SIZE];

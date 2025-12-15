@@ -7,16 +7,17 @@
 
 // Структуры данных сервера
 typedef struct {
-	int fd;
-	char username[MAX_USERNAME];
-	char current_room[MAX_ROOMNAME];
-	struct sockaddr_in addr;
+    int fd;
+    char username[MAX_USERNAME];
+    char current_room[MAX_ROOMNAME];
+    struct sockaddr_in addr;
+    time_t last_activity;  // Время последней активности
 } Client;
 
 typedef struct {
-	char name[MAX_ROOMNAME];
-	int active;
-	MessageHistory history;  // История сообщений комнаты
+    char name[MAX_ROOMNAME];
+    int active;
+    MessageHistory history;  // История сообщений комнаты
 } Room;
 
 // Глобальные массивы (extern - объявление, определение будет в .c файле)
@@ -37,6 +38,7 @@ int find_room(const char *name);
 int create_room(const char *name);
 
 // Отправка сообщений
+int send_all(int fd, const char *buf, size_t len);
 void send_message(int client_fd, const char *msg);
 void broadcast_to_room(const char *room, const char *msg, int exclude_fd);
 
@@ -56,5 +58,9 @@ void handle_disconnect(int client_idx);
 // Управление историей сообщений
 void add_message_to_history(const char *room_name, const char *message);
 void send_room_history(int client_idx, const char *room_name);
+
+// Управление активностью клиентов
+void update_client_activity(int client_idx);
+void check_inactive_clients(void);
 
 #endif // SERVER_UTILS_H

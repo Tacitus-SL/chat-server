@@ -16,6 +16,7 @@ void init_clients(void) {
         clients[i].fd = -1;
         clients[i].username[0] = '\0';
         clients[i].current_room[0] = '\0';
+        clients[i].last_activity = 0;
     }
 }
 
@@ -75,8 +76,30 @@ int create_room(const char *name) {
     return -1;
 }
 
+// Надёжная отправка данных - гарантирует отправку всех байт
+int send_all(int fd, const char *buf, size_t len) {
+    size_t total_sent = 0;
+    size_t bytes_left = len;
+    ssize_t n;
+
+    while (total_sent < len) {
+        n = send(fd, buf + total_sent, bytes_left, 0);
+        if (n == -1) {
+            return -1;  // Ошибка отправки
+        }
+        total_sent += n;
+        bytes_left -= n;
+    }
+
+    return 0;  // Успешно отправлено
+}
+
 void send_message(int client_fd, const char *msg) {
-    send(client_fd, msg, strlen(msg), 0);
+    size_t len = strlen(msg);
+    if (send_all(client_fd, msg, len) == -1) {
+        // Логируем ошибку, но не прерываем работу
+        perror("send_all failed");
+    }
 }
 
 void broadcast_to_room(const char *room, const char *msg, int exclude_fd) {
@@ -137,8 +160,11 @@ void handle_setname(int client_idx, const char *username) {
         return;
     }
 
-    strcpy(clients[client_idx].username, username);
-    strcpy(clients[client_idx].current_room, "lobby");
+    strncpy(clients[client_idx].username, username, MAX_USERNAME - 1);
+    clients[client_idx].username[MAX_USERNAME - 1] = '\0';
+    strncpy(clients[client_idx].current_room, "lobby", MAX_ROOMNAME - 1);
+    clients[client_idx].current_room[MAX_ROOMNAME - 1] = '\0';
+    update_client_activity(client_idx);
 
     char msg[BUFFER_SIZE];
     snprintf(msg, sizeof(msg), "[SERVER] Welcome, %s! You are in 'lobby'. Type /help for commands.\n", username);
@@ -148,6 +174,7 @@ void handle_setname(int client_idx, const char *username) {
     get_timestamp(timestamp, sizeof(timestamp));
     snprintf(msg, sizeof(msg), "[%s] *** %s joined the lobby ***\n", timestamp, username);
     broadcast_to_room("lobby", msg, clients[client_idx].fd);
+    add_message_to_history("lobby", msg);
 }
 
 void handle_join(int client_idx, const char *room_name) {
@@ -161,6 +188,8 @@ void handle_join(int client_idx, const char *room_name) {
         return;
     }
 
+    update_client_activity(client_idx);
+
     if (find_room(room_name) < 0) {
         if (create_room(room_name) < 0) {
             send_message(clients[client_idx].fd, "[ERROR] Cannot create room (server full).\n");
@@ -169,7 +198,8 @@ void handle_join(int client_idx, const char *room_name) {
     }
 
     char old_room[MAX_ROOMNAME];
-    strcpy(old_room, clients[client_idx].current_room);
+    strncpy(old_room, clients[client_idx].current_room, MAX_ROOMNAME - 1);
+    old_room[MAX_ROOMNAME - 1] = '\0';
 
     char msg[BUFFER_SIZE];
     char timestamp[32];
@@ -178,7 +208,8 @@ void handle_join(int client_idx, const char *room_name) {
              timestamp, clients[client_idx].username);
     broadcast_to_room(old_room, msg, clients[client_idx].fd);
 
-    strcpy(clients[client_idx].current_room, room_name);
+    strncpy(clients[client_idx].current_room, room_name, MAX_ROOMNAME - 1);
+    clients[client_idx].current_room[MAX_ROOMNAME - 1] = '\0';
 
     snprintf(msg, sizeof(msg), "[SERVER] You joined room '%s'\n", room_name);
     send_message(clients[client_idx].fd, msg);
@@ -195,6 +226,8 @@ void handle_join(int client_idx, const char *room_name) {
 void handle_leave(int client_idx) {
     if (strlen(clients[client_idx].username) == 0) return;
 
+    update_client_activity(client_idx);
+
     char msg[BUFFER_SIZE];
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
@@ -203,7 +236,8 @@ void handle_leave(int client_idx) {
              timestamp, clients[client_idx].username);
     broadcast_to_room(clients[client_idx].current_room, msg, clients[client_idx].fd);
 
-    strcpy(clients[client_idx].current_room, "lobby");
+    strncpy(clients[client_idx].current_room, "lobby", MAX_ROOMNAME - 1);
+    clients[client_idx].current_room[MAX_ROOMNAME - 1] = '\0';
     send_message(clients[client_idx].fd, "[SERVER] You are back in lobby.\n");
 
     snprintf(msg, sizeof(msg), "[%s] *** %s joined the lobby ***\n",
@@ -212,8 +246,11 @@ void handle_leave(int client_idx) {
 }
 
 void handle_list_rooms(int client_idx) {
+    update_client_activity(client_idx);
+
     char msg[BUFFER_SIZE];
-    strcpy(msg, "[SERVER] Available rooms:\n");
+    msg[0] = '\0';
+    strncat(msg, "[SERVER] Available rooms:\n", BUFFER_SIZE - 1);
 
     for (int i = 0; i < MAX_ROOMS; i++) {
         if (rooms[i].active) {
@@ -225,13 +262,40 @@ void handle_list_rooms(int client_idx) {
             }
             char line[256];
             snprintf(line, sizeof(line), "  - %.31s (%d users)\n", rooms[i].name, count);
-            strcat(msg, line);
+            size_t remaining = BUFFER_SIZE - strlen(msg) - 1;
+            if (remaining > 0) {
+                strncat(msg, line, remaining);
+            }
         }
     }
     send_message(clients[client_idx].fd, msg);
 }
 
+void update_client_activity(int client_idx) {
+    clients[client_idx].last_activity = time(NULL);
+}
+
+void check_inactive_clients(void) {
+    time_t now = time(NULL);
+    const time_t timeout = 300;  // 5 минут неактивности
+
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].fd > 0 && clients[i].last_activity > 0) {
+            if (now - clients[i].last_activity > timeout) {
+                printf("Client timeout: %s (inactive for %ld seconds)\n",
+                       clients[i].username[0] ? clients[i].username : "unnamed",
+                       (long)(now - clients[i].last_activity));
+
+                send_message(clients[i].fd, "[SERVER] Disconnected due to inactivity.\n");
+                handle_disconnect(i);
+            }
+        }
+    }
+}
+
 void handle_list_users(int client_idx) {
+    update_client_activity(client_idx);
+
     char msg[BUFFER_SIZE];
     snprintf(msg, sizeof(msg), "[SERVER] Users in '%s':\n", clients[client_idx].current_room);
 
@@ -240,13 +304,18 @@ void handle_list_users(int client_idx) {
             strcmp(clients[i].current_room, clients[client_idx].current_room) == 0) {
             char line[256];
             snprintf(line, sizeof(line), "  - %.31s\n", clients[i].username);
-            strcat(msg, line);
+            size_t remaining = BUFFER_SIZE - strlen(msg) - 1;
+            if (remaining > 0) {
+                strncat(msg, line, remaining);
+            }
         }
     }
     send_message(clients[client_idx].fd, msg);
 }
 
 void handle_private_message(int client_idx, const char *target, const char *content) {
+    update_client_activity(client_idx);
+
     int target_idx = find_client_by_username(target);
 
     if (target_idx < 0) {
@@ -272,6 +341,8 @@ void handle_chat_message(int client_idx, const char *content) {
         send_message(clients[client_idx].fd, "[ERROR] Set username first with /name <username>\n");
         return;
     }
+
+    update_client_activity(client_idx);
 
     char msg[BUFFER_SIZE];
     char timestamp[32];
