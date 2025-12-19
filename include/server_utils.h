@@ -67,4 +67,8 @@ void check_inactive_clients(void);
 int count_users_in_room(const char *room_name);
 void cleanup_empty_rooms(void);
 
+// Цвета пользователей
+const char* get_user_color(const char *username);
+unsigned int hash_string(const char *str);
+
 #endif // SERVER_UTILS_H

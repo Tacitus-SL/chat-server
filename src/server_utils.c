@@ -1,4 +1,5 @@
 #include "server_utils.h"
+#include "colors.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,20 @@
 // Определение глобальных массивов
 Client clients[MAX_CLIENTS];
 Room rooms[MAX_ROOMS];
+
+// Определение массива цветов пользователей
+const char* USER_COLORS[10] = {
+    COLOR_USER_1,
+    COLOR_USER_2,
+    COLOR_USER_3,
+    COLOR_USER_4,
+    COLOR_USER_5,
+    COLOR_USER_6,
+    COLOR_USER_7,
+    COLOR_USER_8,
+    COLOR_USER_9,
+    COLOR_USER_10
+};
 
 void init_clients(void) {
     for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -137,7 +152,7 @@ void send_room_history(int client_idx, const char *room_name) {
         return; // Нет истории
     }
 
-    send_message(clients[client_idx].fd, "[SERVER] --- Recent messages ---\n");
+    send_message(clients[client_idx].fd, COLOR_SYSTEM "[SERVER] --- Recent messages ---" COLOR_RESET "\n");
 
     // Отправляем сообщения в правильном порядке
     int start = (hist->head - hist->count + MAX_HISTORY) % MAX_HISTORY;
@@ -146,17 +161,17 @@ void send_room_history(int client_idx, const char *room_name) {
         send_message(clients[client_idx].fd, hist->messages[idx]);
     }
 
-    send_message(clients[client_idx].fd, "[SERVER] --- End of history ---\n");
+    send_message(clients[client_idx].fd, COLOR_SYSTEM "[SERVER] --- End of history ---" COLOR_RESET "\n");
 }
 
 void handle_setname(int client_idx, const char *username) {
     if (strlen(username) == 0 || strlen(username) >= MAX_USERNAME) {
-        send_message(clients[client_idx].fd, "[ERROR] Invalid username length.\n");
+        send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Invalid username length." COLOR_RESET "\n");
         return;
     }
 
     if (find_client_by_username(username) >= 0) {
-        send_message(clients[client_idx].fd, "[ERROR] Username already taken.\n");
+        send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Username already taken." COLOR_RESET "\n");
         return;
     }
 
@@ -167,24 +182,26 @@ void handle_setname(int client_idx, const char *username) {
     update_client_activity(client_idx);
 
     char msg[BUFFER_SIZE];
-    snprintf(msg, sizeof(msg), "[SERVER] Welcome, %s! You are in 'lobby'. Type /help for commands.\n", username);
+    snprintf(msg, sizeof(msg), COLOR_SERVER "[SERVER] Welcome, %s%s%s! You are in 'lobby'. Type /help for commands." COLOR_RESET "\n",
+             get_user_color(username), username, COLOR_SERVER);
     send_message(clients[client_idx].fd, msg);
 
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
-    snprintf(msg, sizeof(msg), "[%s] *** %s joined the lobby ***\n", timestamp, username);
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_ACTION " *** %s%s%s joined the lobby ***" COLOR_RESET "\n",
+             timestamp, get_user_color(username), username, COLOR_ACTION);
     broadcast_to_room("lobby", msg, clients[client_idx].fd);
     add_message_to_history("lobby", msg);
 }
 
 void handle_join(int client_idx, const char *room_name) {
     if (strlen(clients[client_idx].username) == 0) {
-        send_message(clients[client_idx].fd, "[ERROR] Set username first with /name <username>\n");
+        send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Set username first with /name <username>" COLOR_RESET "\n");
         return;
     }
 
     if (strlen(room_name) == 0 || strlen(room_name) >= MAX_ROOMNAME) {
-        send_message(clients[client_idx].fd, "[ERROR] Invalid room name.\n");
+        send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Invalid room name." COLOR_RESET "\n");
         return;
     }
 
@@ -192,7 +209,7 @@ void handle_join(int client_idx, const char *room_name) {
 
     if (find_room(room_name) < 0) {
         if (create_room(room_name) < 0) {
-            send_message(clients[client_idx].fd, "[ERROR] Cannot create room (server full).\n");
+            send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Cannot create room (server full)." COLOR_RESET "\n");
             return;
         }
     }
@@ -204,21 +221,23 @@ void handle_join(int client_idx, const char *room_name) {
     char msg[BUFFER_SIZE];
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
-    snprintf(msg, sizeof(msg), "[%s] *** %s left the room ***\n",
-             timestamp, clients[client_idx].username);
+    const char *user_color = get_user_color(clients[client_idx].username);
+
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_ACTION " *** %s%s%s left the room ***" COLOR_RESET "\n",
+             timestamp, user_color, clients[client_idx].username, COLOR_ACTION);
     broadcast_to_room(old_room, msg, clients[client_idx].fd);
 
     strncpy(clients[client_idx].current_room, room_name, MAX_ROOMNAME - 1);
     clients[client_idx].current_room[MAX_ROOMNAME - 1] = '\0';
 
-    snprintf(msg, sizeof(msg), "[SERVER] You joined room '%s'\n", room_name);
+    snprintf(msg, sizeof(msg), COLOR_SERVER "[SERVER] You joined room '%s'" COLOR_RESET "\n", room_name);
     send_message(clients[client_idx].fd, msg);
 
     // Показываем историю сообщений
     send_room_history(client_idx, room_name);
 
-    snprintf(msg, sizeof(msg), "[%s] *** %s joined the room ***\n",
-             timestamp, clients[client_idx].username);
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_ACTION " *** %s%s%s joined the room ***" COLOR_RESET "\n",
+             timestamp, user_color, clients[client_idx].username, COLOR_ACTION);
     broadcast_to_room(room_name, msg, clients[client_idx].fd);
     add_message_to_history(room_name, msg);
 
@@ -234,17 +253,18 @@ void handle_leave(int client_idx) {
     char msg[BUFFER_SIZE];
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
+    const char *user_color = get_user_color(clients[client_idx].username);
 
-    snprintf(msg, sizeof(msg), "[%s] *** %s left the room ***\n",
-             timestamp, clients[client_idx].username);
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_ACTION " *** %s%s%s left the room ***" COLOR_RESET "\n",
+             timestamp, user_color, clients[client_idx].username, COLOR_ACTION);
     broadcast_to_room(clients[client_idx].current_room, msg, clients[client_idx].fd);
 
     strncpy(clients[client_idx].current_room, "lobby", MAX_ROOMNAME - 1);
     clients[client_idx].current_room[MAX_ROOMNAME - 1] = '\0';
-    send_message(clients[client_idx].fd, "[SERVER] You are back in lobby.\n");
+    send_message(clients[client_idx].fd, COLOR_SERVER "[SERVER] You are back in lobby." COLOR_RESET "\n");
 
-    snprintf(msg, sizeof(msg), "[%s] *** %s joined the lobby ***\n",
-             timestamp, clients[client_idx].username);
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_ACTION " *** %s%s%s joined the lobby ***" COLOR_RESET "\n",
+             timestamp, user_color, clients[client_idx].username, COLOR_ACTION);
     broadcast_to_room("lobby", msg, clients[client_idx].fd);
 
     // Очищаем пустые комнаты
@@ -256,7 +276,7 @@ void handle_list_rooms(int client_idx) {
 
     char msg[BUFFER_SIZE];
     msg[0] = '\0';
-    strncat(msg, "[SERVER] Available rooms:\n", BUFFER_SIZE - 1);
+    strncat(msg, COLOR_SERVER "[SERVER] Available rooms:" COLOR_RESET "\n", BUFFER_SIZE - 1);
 
     for (int i = 0; i < MAX_ROOMS; i++) {
         if (rooms[i].active) {
@@ -267,7 +287,7 @@ void handle_list_rooms(int client_idx) {
                 }
             }
             char line[256];
-            snprintf(line, sizeof(line), "  - %.31s (%d users)\n", rooms[i].name, count);
+            snprintf(line, sizeof(line), COLOR_INFO "  - %.31s" COLOR_RESET " (%d users)\n", rooms[i].name, count);
             size_t remaining = BUFFER_SIZE - strlen(msg) - 1;
             if (remaining > 0) {
                 strncat(msg, line, remaining);
@@ -331,17 +351,36 @@ void cleanup_empty_rooms(void) {
     }
 }
 
+// Простая хеш-функция для строки
+unsigned int hash_string(const char *str) {
+    unsigned int hash = 5381;
+    int c;
+
+    while ((c = *str++)) {
+        hash = ((hash << 5) + hash) + c; // hash * 33 + c
+    }
+
+    return hash;
+}
+
+// Получить цвет для пользователя на основе его имени
+const char* get_user_color(const char *username) {
+    unsigned int hash = hash_string(username);
+    return USER_COLORS[hash % USER_COLORS_COUNT];
+}
+
 void handle_list_users(int client_idx) {
     update_client_activity(client_idx);
 
     char msg[BUFFER_SIZE];
-    snprintf(msg, sizeof(msg), "[SERVER] Users in '%s':\n", clients[client_idx].current_room);
+    snprintf(msg, sizeof(msg), COLOR_SERVER "[SERVER] Users in '%s':" COLOR_RESET "\n", clients[client_idx].current_room);
 
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (clients[i].fd > 0 && strlen(clients[i].username) > 0 &&
             strcmp(clients[i].current_room, clients[client_idx].current_room) == 0) {
             char line[256];
-            snprintf(line, sizeof(line), "  - %.31s\n", clients[i].username);
+            const char *user_color = get_user_color(clients[i].username);
+            snprintf(line, sizeof(line), "  - %s%.31s" COLOR_RESET "\n", user_color, clients[i].username);
             size_t remaining = BUFFER_SIZE - strlen(msg) - 1;
             if (remaining > 0) {
                 strncat(msg, line, remaining);
@@ -357,26 +396,28 @@ void handle_private_message(int client_idx, const char *target, const char *cont
     int target_idx = find_client_by_username(target);
 
     if (target_idx < 0) {
-        send_message(clients[client_idx].fd, "[ERROR] User not found.\n");
+        send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] User not found." COLOR_RESET "\n");
         return;
     }
 
     char msg[BUFFER_SIZE];
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
+    const char *sender_color = get_user_color(clients[client_idx].username);
+    const char *target_color = get_user_color(target);
 
-    snprintf(msg, sizeof(msg), "[%s] [PM from %s]: %s\n",
-             timestamp, clients[client_idx].username, content);
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_PM " [PM from %s%s" COLOR_PM "]: " COLOR_RESET "%s\n",
+             timestamp, sender_color, clients[client_idx].username, content);
     send_message(clients[target_idx].fd, msg);
 
-    snprintf(msg, sizeof(msg), "[%s] [PM to %s]: %s\n",
-             timestamp, target, content);
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_PM " [PM to %s%s" COLOR_PM "]: " COLOR_RESET "%s\n",
+             timestamp, target_color, target, content);
     send_message(clients[client_idx].fd, msg);
 }
 
 void handle_chat_message(int client_idx, const char *content) {
     if (strlen(clients[client_idx].username) == 0) {
-        send_message(clients[client_idx].fd, "[ERROR] Set username first with /name <username>\n");
+        send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Set username first with /name <username>" COLOR_RESET "\n");
         return;
     }
 
@@ -385,9 +426,10 @@ void handle_chat_message(int client_idx, const char *content) {
     char msg[BUFFER_SIZE];
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
+    const char *user_color = get_user_color(clients[client_idx].username);
 
-    snprintf(msg, sizeof(msg), "[%s] %s: %s\n",
-             timestamp, clients[client_idx].username, content);
+    snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET " %s%s" COLOR_RESET ": %s\n",
+             timestamp, user_color, clients[client_idx].username, content);
 
     // Сохраняем в историю
     add_message_to_history(clients[client_idx].current_room, msg);
@@ -403,20 +445,21 @@ void handle_chat_message(int client_idx, const char *content) {
 
 void handle_help(int client_idx) {
     char msg[BUFFER_SIZE];
-    strcpy(msg, "[SERVER] Available commands:\n");
-    strcat(msg, "  /name <username>        - Set your username\n");
-    strcat(msg, "  /join <room>            - Join or create a room\n");
-    strcat(msg, "  /leave                  - Leave current room (go to lobby)\n");
-    strcat(msg, "  /rooms                  - List all rooms\n");
-    strcat(msg, "  /users                  - List users in current room\n");
-    strcat(msg, "  /msg <user> <message>   - Send private message\n");
-    strcat(msg, "  /quit                   - Exit the chat\n");
-    strcat(msg, "  /help                   - Show this help\n");
+    msg[0] = '\0';
+    strncat(msg, COLOR_SERVER "[SERVER] Available commands:" COLOR_RESET "\n", BUFFER_SIZE - 1);
+    strncat(msg, COLOR_INFO "  /name <username>        " COLOR_RESET "- Set your username\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /join <room>            " COLOR_RESET "- Join or create a room\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /leave                  " COLOR_RESET "- Leave current room (go to lobby)\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /rooms                  " COLOR_RESET "- List all rooms\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /users                  " COLOR_RESET "- List users in current room\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /msg <user> <message>   " COLOR_RESET "- Send private message\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /quit                   " COLOR_RESET "- Exit the chat\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /help                   " COLOR_RESET "- Show this help\n", BUFFER_SIZE - strlen(msg) - 1);
     send_message(clients[client_idx].fd, msg);
 }
 
 void handle_quit(int client_idx) {
-    send_message(clients[client_idx].fd, "[SERVER] Goodbye! Disconnecting...\n");
+    send_message(clients[client_idx].fd, COLOR_SERVER "[SERVER] Goodbye! Disconnecting..." COLOR_RESET "\n");
     handle_disconnect(client_idx);
 }
 
@@ -430,12 +473,12 @@ void handle_client_message(int client_idx, char *buffer) {
         if (strcmp(cmd, "/name") == 0) {
             char *username = strtok(NULL, " ");
             if (username) handle_setname(client_idx, username);
-            else send_message(clients[client_idx].fd, "[ERROR] Usage: /name <username>\n");
+            else send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Usage: /name <username>" COLOR_RESET "\n");
         }
         else if (strcmp(cmd, "/join") == 0) {
             char *room = strtok(NULL, " ");
             if (room) handle_join(client_idx, room);
-            else send_message(clients[client_idx].fd, "[ERROR] Usage: /join <room>\n");
+            else send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Usage: /join <room>" COLOR_RESET "\n");
         }
         else if (strcmp(cmd, "/leave") == 0) {
             handle_leave(client_idx);
@@ -450,7 +493,7 @@ void handle_client_message(int client_idx, char *buffer) {
             char *target = strtok(NULL, " ");
             char *msg = strtok(NULL, "");
             if (target && msg) handle_private_message(client_idx, target, msg);
-            else send_message(clients[client_idx].fd, "[ERROR] Usage: /msg <user> <message>\n");
+            else send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Usage: /msg <user> <message>" COLOR_RESET "\n");
         }
         else if (strcmp(cmd, "/help") == 0) {
             handle_help(client_idx);
@@ -459,7 +502,7 @@ void handle_client_message(int client_idx, char *buffer) {
             handle_quit(client_idx);
         }
         else {
-            send_message(clients[client_idx].fd, "[ERROR] Unknown command. Type /help for help.\n");
+            send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Unknown command. Type /help for help." COLOR_RESET "\n");
         }
     } else {
         handle_chat_message(client_idx, buffer);
@@ -475,9 +518,10 @@ void handle_disconnect(int client_idx) {
         char msg[BUFFER_SIZE];
         char timestamp[32];
         get_timestamp(timestamp, sizeof(timestamp));
+        const char *user_color = get_user_color(clients[client_idx].username);
 
-        snprintf(msg, sizeof(msg), "[%s] *** %s disconnected ***\n",
-                 timestamp, clients[client_idx].username);
+        snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_ACTION " *** %s%s%s disconnected ***" COLOR_RESET "\n",
+                 timestamp, user_color, clients[client_idx].username, COLOR_ACTION);
         broadcast_to_room(clients[client_idx].current_room, msg, -1);
 
         // Логирование на сервере

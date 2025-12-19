@@ -12,6 +12,7 @@
 #include <errno.h>
 #include "protocol.h"
 #include "server_utils.h"
+#include "colors.h"
 
 // Внешнее объявление для доступа к rooms
 extern Room rooms[];
@@ -128,7 +129,7 @@ int main(int argc, char *argv[]) {
 
                         char msg[BUFFER_SIZE];
                         snprintf(msg, sizeof(msg),
-                                "[SERVER] Connected to chat server. Set your username with /name <username>\n");
+                                COLOR_SERVER "[SERVER] Connected to chat server. Set your username with /name <username>" COLOR_RESET "\n");
                         send_message(client_fd, msg);
 
                         printf("New connection from %s:%d\n",
@@ -138,7 +139,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 if (!added) {
-                    char msg[] = "[ERROR] Server is full.\n";
+                    char msg[] = COLOR_ERROR "[ERROR] Server is full." COLOR_RESET "\n";
                     send(client_fd, msg, strlen(msg), 0);
                     close(client_fd);
                 }
