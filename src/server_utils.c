@@ -32,6 +32,7 @@ void init_clients(void) {
         clients[i].username[0] = '\0';
         clients[i].current_room[0] = '\0';
         clients[i].last_activity = 0;
+        clients[i].last_typing_sent = 0;
     }
 }
 
@@ -455,6 +456,7 @@ void handle_help(int client_idx) {
     strncat(msg, COLOR_INFO "  /msg <user> <message>   " COLOR_RESET "- Send private message\n", BUFFER_SIZE - strlen(msg) - 1);
     strncat(msg, COLOR_INFO "  /quit                   " COLOR_RESET "- Exit the chat\n", BUFFER_SIZE - strlen(msg) - 1);
     strncat(msg, COLOR_INFO "  /ping                   " COLOR_RESET "- Check server responsivness\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /typing                 " COLOR_RESET "- Send typing notification\n", BUFFER_SIZE - strlen(msg) - 1);
     strncat(msg, COLOR_INFO "  /help                   " COLOR_RESET "- Show this help\n", BUFFER_SIZE - strlen(msg) - 1);
     send_message(clients[client_idx].fd, msg);
 }
@@ -471,6 +473,28 @@ void handle_ping(int client_idx) {
 
     snprintf(msg, sizeof(msg), COLOR_SUCCESS "[SERVER] PONG [%s]\n" COLOR_RESET, timestamp);
     send_message(clients[client_idx].fd, msg);
+}
+
+void handle_typing(int client_idx) {
+    if (strlen(clients[client_idx].username) == 0) return;
+
+    update_client_activity(client_idx);
+
+    time_t now = time(NULL);
+    if (now - clients[client_idx].last_typing_sent < 3) {
+        return;
+    }
+
+    clients[client_idx].last_typing_sent = now;
+
+    char msg[BUFFER_SIZE];
+    const char *user_color = get_user_color(clients[client_idx].username);
+
+    snprintf(msg, sizeof(msg),
+             COLOR_INFO "\x1b[3m ... %s%s%s is typing ... \x1b[0m" COLOR_RESET "\n",
+             user_color, clients[client_idx].username, COLOR_INFO);
+
+    broadcast_to_room(clients[client_idx].current_room, msg, clients[client_idx].fd);
 }
 
 void handle_client_message(int client_idx, char *buffer) {
@@ -513,6 +537,9 @@ void handle_client_message(int client_idx, char *buffer) {
         }
         else if (strcmp(cmd, "/ping") == 0) {
             handle_ping(client_idx);
+        }
+        else if (strcmp(cmd, "/typing") == 0) {
+            handle_typing(client_idx);
         }
         else {
             send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Unknown command. Type /help for help." COLOR_RESET "\n");

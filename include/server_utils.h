@@ -12,6 +12,7 @@ typedef struct {
     char current_room[MAX_ROOMNAME];
     struct sockaddr_in addr;
     time_t last_activity;  // Время последней активности
+	time_t last_typing_sent;
 } Client;
 
 typedef struct {
