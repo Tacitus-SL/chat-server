@@ -454,6 +454,7 @@ void handle_help(int client_idx) {
     strncat(msg, COLOR_INFO "  /users                  " COLOR_RESET "- List users in current room\n", BUFFER_SIZE - strlen(msg) - 1);
     strncat(msg, COLOR_INFO "  /msg <user> <message>   " COLOR_RESET "- Send private message\n", BUFFER_SIZE - strlen(msg) - 1);
     strncat(msg, COLOR_INFO "  /quit                   " COLOR_RESET "- Exit the chat\n", BUFFER_SIZE - strlen(msg) - 1);
+    strncat(msg, COLOR_INFO "  /ping                   " COLOR_RESET "- Check server responsivness\n", BUFFER_SIZE - strlen(msg) - 1);
     strncat(msg, COLOR_INFO "  /help                   " COLOR_RESET "- Show this help\n", BUFFER_SIZE - strlen(msg) - 1);
     send_message(clients[client_idx].fd, msg);
 }
@@ -461,6 +462,15 @@ void handle_help(int client_idx) {
 void handle_quit(int client_idx) {
     send_message(clients[client_idx].fd, COLOR_SERVER "[SERVER] Goodbye! Disconnecting..." COLOR_RESET "\n");
     handle_disconnect(client_idx);
+}
+
+void handle_ping(int client_idx) {
+    char msg[BUFFER_SIZE];
+    char timestamp[32];
+    get_timestamp(timestamp, sizeof(timestamp));
+
+    snprintf(msg, sizeof(msg), COLOR_SERVER "[SERVER] PONG [%s]\n" COLOR_RESET, timestamp);
+    send_message(clients[client_idx].fd, msg);
 }
 
 void handle_client_message(int client_idx, char *buffer) {
@@ -500,6 +510,9 @@ void handle_client_message(int client_idx, char *buffer) {
         }
         else if (strcmp(cmd, "/quit") == 0) {
             handle_quit(client_idx);
+        }
+        else if (strcmp(cmd, "/ping") == 0) {
+            handle_ping(client_idx);
         }
         else {
             send_message(clients[client_idx].fd, COLOR_ERROR "[ERROR] Unknown command. Type /help for help." COLOR_RESET "\n");
