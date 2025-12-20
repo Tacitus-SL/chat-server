@@ -68,8 +68,6 @@ int main(int argc, char *argv[]) {
     printf("Connected to chat server!\n");
     printf("---------------------------------------\n");
 
-    setvbuf(stdout, NULL, _IOLBF, 0);
-
     while (running) {
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -87,8 +85,6 @@ int main(int argc, char *argv[]) {
         }
 
         if (activity <= 0) continue;
-
-        // Получение сообщений от сервера
         if (FD_ISSET(sock_fd, &readfds)) {
             char buffer[BUFFER_SIZE];
             int bytes = recv(sock_fd, buffer, sizeof(buffer) - 1, 0);
@@ -97,24 +93,42 @@ int main(int argc, char *argv[]) {
                 printf("\n[DISCONNECTED] Connection to server lost.\n");
                 break;
             }
-
             buffer[bytes] = '\0';
-            printf("%s", buffer);
+
+            // ИЗМЕНЕНИЕ ЗДЕСЬ:
+            // 1. Сначала делаем отступ (\n), чтобы не затереть то, что вы пишете сейчас
+            // 2. Печатаем сообщение
+            // 3. Снова рисуем стрелочку внизу
+
+            printf("\r%s", buffer); // \n перенесет нас на чистую строку
+
+            if (buffer[bytes-1] != '\n') printf("\n"); // Добиваем строку если надо
+
+            printf("> "); // Рисуем новую стрелочку для продолжения ввода
             fflush(stdout);
         }
 
-        // Отправка сообщений на сервер
+        // ОТПРАВКА СООБЩЕНИЯ
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             char buffer[BUFFER_SIZE];
+            if (!fgets(buffer, sizeof(buffer), stdin)) continue;
 
-            if (!fgets(buffer, sizeof(buffer), stdin)) {
-                continue;
+            // Удаляем \n в конце, который добавил fgets, чтобы не слать лишние пустые строки
+            size_t len = strlen(buffer);
+            if (len > 0 && buffer[len-1] == '\n') {
+                buffer[len-1] = '\0'; // Обрезаем \n локально для проверки
             }
 
-            // Отправляем сообщение на сервер
-            if (send(sock_fd, buffer, strlen(buffer), 0) < 0) {
-                perror("send");
-                break;
+            if (strlen(buffer) > 0) { // Не отправляем пустые сообщения
+                // Восстанавливаем \n, так как серверу он, возможно, нужен как разделитель
+                // Или отправляем как есть, но сервер должен уметь читать без \n.
+                // В вашем протоколе сервер ждет строку. Лучше отправить с \n.
+                strcat(buffer, "\n");
+
+                if (send(sock_fd, buffer, strlen(buffer), 0) < 0) {
+                    perror("send");
+                    break;
+                }
             }
         }
     }
