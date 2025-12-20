@@ -3,23 +3,40 @@
 #include <string.h>
 #include <assert.h>
 #include "protocol.h"
-#include "server_utils.h" // Обязательно подключаем utils
+#include "server_utils.h"
 
-// Цвета для вывода
-#define GREEN "\033[0;32m"
-#define RED "\033[0;31m"
-#define YELLOW "\033[1;33m"
-#define BLUE "\033[1;34m"
-#define NC "\033[0m"
+/**
+ * @file unit_tests.c
+ * @brief Unit testing suite for the Chat Application server logic.
+ *
+ * This file tests the core logic of the server (room management, user handling,
+ * history) without requiring a real network connection. It directly manipulates
+ * the global state arrays `clients` and `rooms`.
+ */
 
-// Доступ к глобальным переменным из server_utils.c
+/* --- Output Colors --- */
+#define GREEN   "\033[0;32m"
+#define RED     "\033[0;31m"
+#define YELLOW  "\033[1;33m"
+#define BLUE    "\033[1;34m"
+#define NC      "\033[0m"
+
+/* --- External Globals --- */
+/* Accessing global state defined in server_utils.c */
 extern Client clients[MAX_CLIENTS];
 extern Room rooms[MAX_ROOMS];
 
+/* --- Test Counters --- */
 int tests_passed = 0;
 int tests_failed = 0;
 
-void test_result(const char* test_name, int passed) {
+/**
+ * @brief Prints the result of a single test case.
+ *
+ * @param test_name Description of the test.
+ * @param passed 1 if test passed, 0 if failed.
+ */
+void test_result(const char *test_name, int passed) {
     if (passed) {
         printf(GREEN "✓ " NC "%s\n", test_name);
         tests_passed++;
@@ -29,15 +46,17 @@ void test_result(const char* test_name, int passed) {
     }
 }
 
-// Вспомогательная функция для сброса состояния
+/**
+ * @brief Resets the global server state before each test.
+ */
 void setup() {
     init_clients();
     init_rooms();
 }
 
-// ==========================================
-// ЧАСТЬ 1: ТЕСТЫ ПРОТОКОЛА (Твои тесты)
-// ==========================================
+/* ========================================== */
+/* PART 1: PROTOCOL TESTS                     */
+/* ========================================== */
 
 void test_protocol_constants() {
     test_result("MAX_USERNAME is positive", MAX_USERNAME > 0);
@@ -55,15 +74,17 @@ void test_string_limits() {
     test_result("Username max length check", strlen(username) == MAX_USERNAME - 1);
 }
 
-// ==========================================
-// ЧАСТЬ 2: ТЕСТЫ ЛОГИКИ СЕРВЕРА (Новые тесты)
-// ==========================================
+/* ========================================== */
+/* PART 2: SERVER LOGIC TESTS                 */
+/* ========================================== */
 
 void test_init_state() {
-    setup();
     int clients_empty = 1;
-    for(int i=0; i<MAX_CLIENTS; i++) {
-        if(clients[i].fd != -1) clients_empty = 0;
+    int i;
+    setup();
+
+    for (i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].fd != -1) clients_empty = 0;
     }
     test_result("Clients array initialized empty", clients_empty);
     test_result("Lobby room exists by default", strcmp(rooms[0].name, "lobby") == 0);
@@ -73,17 +94,16 @@ void test_init_state() {
 void test_setname_logic() {
     setup();
 
-    // Эмулируем подключенного клиента с индексом 0
-    clients[0].fd = 999; // Фейковый сокет
+    /* Simulate a connected client at index 0 */
+    clients[0].fd = 999; /* Fake socket */
 
-    // Пытаемся установить имя
-    // Примечание: в консоли может появиться ошибка send(), это нормально для тестов
+    /* Attempt to set name. Note: This may print socket errors to console, which is expected. */
     handle_setname(0, "Alice");
 
     test_result("Handle_setname sets username", strcmp(clients[0].username, "Alice") == 0);
     test_result("User added to lobby automatically", strcmp(clients[0].current_room, "lobby") == 0);
 
-    // Пытаемся занять то же имя другим клиентом
+    /* Attempt to take the same name with another client */
     clients[1].fd = 888;
     handle_setname(1, "Alice");
 
@@ -91,46 +111,48 @@ void test_setname_logic() {
 }
 
 void test_room_management() {
+    int room_idx;
+    int found_idx;
+    int dup_idx;
     setup();
 
-    // Создание комнаты
-    int room_idx = create_room("gaming");
+    /* 1. Create room */
+    room_idx = create_room("gaming");
     test_result("Create_room returns valid index", room_idx != -1);
     test_result("Room name set correctly", strcmp(rooms[room_idx].name, "gaming") == 0);
     test_result("Room set to active", rooms[room_idx].active == 1);
 
-    // Поиск комнаты
-    int found_idx = find_room("gaming");
+    /* 2. Find room */
+    found_idx = find_room("gaming");
     test_result("Find_room finds existing room", found_idx == room_idx);
 
-    // Создание дубликата
-    int dup_idx = create_room("gaming");
+    /* 3. Duplicate room */
+    dup_idx = create_room("gaming");
     test_result("Cannot create duplicate room", dup_idx == -1);
 }
 
 void test_join_leave_logic() {
     setup();
 
-    // Подготовка: Клиент Alice в Lobby
+    /* Preparation: Alice is in Lobby */
     clients[0].fd = 777;
     strcpy(clients[0].username, "Alice");
     strcpy(clients[0].current_room, "lobby");
 
-    // Создаем комнату и заходим
+    /* Create room and join */
     create_room("tech");
     handle_join(0, "tech");
 
     test_result("User moved to new room", strcmp(clients[0].current_room, "tech") == 0);
 
-    // Выход
+    /* Leave */
     handle_leave(0);
     test_result("User returned to lobby after leave", strcmp(clients[0].current_room, "lobby") == 0);
 }
 
 void test_history_logic() {
+    int lobby_idx = 0; /* Lobby is always 0 */
     setup();
-
-    int lobby_idx = 0; // Lobby всегда 0
 
     add_message_to_history("lobby", "Message 1");
     add_message_to_history("lobby", "Message 2");
@@ -150,9 +172,9 @@ void test_find_client() {
     test_result("Find non-existent client returns -1", find_client_by_username("Ghost") == -1);
 }
 
-// ==========================================
-// MAIN
-// ==========================================
+/* ========================================== */
+/* MAIN ENTRY POINT                           */
+/* ========================================== */
 
 int main() {
     printf("\n");
@@ -183,7 +205,7 @@ int main() {
     test_history_logic();
     printf("\n");
 
-    // Итоговые результаты
+    /* Final Results */
     printf("================================\n");
     printf("Test Results\n");
     printf("================================\n");

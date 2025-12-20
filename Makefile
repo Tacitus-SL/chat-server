@@ -19,7 +19,6 @@ HEADERS := $(wildcard $(INC_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
 # Object files
 SERVER_OBJ := $(BUILD_DIR)/server.o $(BUILD_DIR)/server_utils.o
 CLIENT_OBJ := $(BUILD_DIR)/client.o
-# Для тестов нужны server_utils.o
 UNIT_TEST_OBJ := $(BUILD_DIR)/unit_tests.o $(BUILD_DIR)/server_utils.o
 
 # Dependency files
@@ -40,7 +39,7 @@ GREEN := \033[0;32m
 YELLOW := \033[1;33m
 RED := \033[0;31m
 BLUE := \033[38;5;33m
-NC := \033[0m# No Color
+NC := \033[0m
 
 # Default target
 .DEFAULT_GOAL := all
@@ -77,33 +76,28 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | dirs
 
 # --- TESTING RULES ---
 
-# Главная команда: запускает ВСЕ тесты
 test: unit-tests integration-tests
 
-# 1. Unit Tests (C)
+# 1. Unit Tests
 unit-tests: $(UNIT_TEST_BIN)
 	@echo "$(BLUE)Running Unit Tests...$(NC)"
 	@./$(UNIT_TEST_BIN)
 	@echo ""
 
-# 2. Integration Tests (Bash)
-# Зависит от $(SERVER), чтобы убедиться, что сервер собран перед тестом
+# 2. Integration Tests
 integration-tests: $(SERVER)
 	@chmod +x tests/run_tests.sh
 	@bash tests/run_tests.sh
 	@echo ""
 
-# Сборка unit-тестов
 $(UNIT_TEST_BIN): $(UNIT_TEST_OBJ)
 	@echo "$(YELLOW)Linking unit tests...$(NC)"
 	$(CC) $(UNIT_TEST_OBJ) -o $@ $(LDFLAGS)
 
-# Спец. правило для компиляции unit_tests.c из папки tests/
 $(BUILD_DIR)/unit_tests.o: $(UNIT_TEST_SRC) | dirs
 	@echo "$(YELLOW)Compiling $<...$(NC)"
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@ -MF $(DEPS_DIR)/unit_tests.d
 
-# Include deps
 -include $(SERVER_DEP) $(CLIENT_DEP) $(UNIT_TEST_DEP)
 
 # --- CLEAN ---

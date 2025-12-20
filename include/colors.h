@@ -1,44 +1,50 @@
 #ifndef COLORS_H
 #define COLORS_H
 
-// ANSI Color Codes для терминала
+/**
+ * @file colors.h
+ * @brief ANSI Color Codes for terminal output formatting.
+ *
+ * This file contains macros for coloring text in the client console.
+ * It includes colors for server messages, users, errors, and system notifications.
+ */
 
-// Основные цвета
-#define COLOR_RESET   "\033[0m"
-#define COLOR_BOLD    "\033[1m"
-#define COLOR_DIM     "\033[2m"
+/* --- Basic Colors --- */
+#define COLOR_RESET     "\033[0m"       /**< Reset all color attributes */
+#define COLOR_BOLD      "\033[1m"       /**< Bold text */
+#define COLOR_DIM       "\033[2m"       /**< Dim/Faint text */
 
-// Серверные сообщения (темно-серый/синий)
-#define COLOR_SERVER  "\033[38;5;117m"      // Светло-голубой
-#define COLOR_INFO    "\033[38;5;33m"       // Синий
-#define COLOR_ERROR   "\033[38;5;196m"      // Красный
-#define COLOR_SUCCESS "\033[38;5;34m"       // Зелёный
+/* --- Server Messages (Greys/Blues/Reds) --- */
+#define COLOR_SERVER    "\033[38;5;117m" /**< Light Blue - General server info */
+#define COLOR_INFO      "\033[38;5;33m"  /**< Blue - Informational messages */
+#define COLOR_ERROR     "\033[38;5;196m" /**< Red - Errors and warnings */
+#define COLOR_SUCCESS   "\033[38;5;34m"  /**< Green - Success messages */
 
-// Системные сообщения
-#define COLOR_SYSTEM  "\033[38;5;245m"      // Светло-серый
-#define COLOR_TIMESTAMP "\033[38;5;245m"    // Светло-серый для timestamps
+/* --- System Messages --- */
+#define COLOR_SYSTEM    "\033[38;5;245m" /**< Light Grey - System internal msgs */
+#define COLOR_TIMESTAMP "\033[38;5;245m" /**< Light Grey - Message timestamps */
 
-// Цвета для пользователей (яркие и контрастные)
-#define COLOR_USER_1  "\033[38;5;81m"       // Голубой
-#define COLOR_USER_2  "\033[38;5;213m"      // Розовый
-#define COLOR_USER_3  "\033[38;5;228m"      // Жёлтый
-#define COLOR_USER_4  "\033[38;5;120m"      // Салатовый
-#define COLOR_USER_5  "\033[38;5;219m"      // Лавандовый
-#define COLOR_USER_6  "\033[38;5;216m"      // Персиковый
-#define COLOR_USER_7  "\033[38;5;159m"      // Мятный
-#define COLOR_USER_8  "\033[38;5;210m"      // Оранжевый
-#define COLOR_USER_9  "\033[38;5;141m"      // Фиолетовый
-#define COLOR_USER_10 "\033[38;5;86m"       // Бирюзовый
+/* --- User Colors (Bright and High Contrast) --- */
+#define COLOR_USER_1    "\033[38;5;81m"  /**< Cyan */
+#define COLOR_USER_2    "\033[38;5;213m" /**< Pink */
+#define COLOR_USER_3    "\033[38;5;228m" /**< Light Yellow */
+#define COLOR_USER_4    "\033[38;5;120m" /**< Lime Green */
+#define COLOR_USER_5    "\033[38;5;219m" /**< Lavender */
+#define COLOR_USER_6    "\033[38;5;216m" /**< Peach */
+#define COLOR_USER_7    "\033[38;5;159m" /**< Mint */
+#define COLOR_USER_8    "\033[38;5;210m" /**< Orange */
+#define COLOR_USER_9    "\033[38;5;141m" /**< Purple */
+#define COLOR_USER_10   "\033[38;5;86m"  /**< Turquoise */
 
-// Массив цветов пользователей для удобного доступа
-extern const char* USER_COLORS[10];
+/**
+ * @brief Array of user colors for deterministic color assignment.
+ */
+extern const char *USER_COLORS[10];
 
 #define USER_COLORS_COUNT 10
 
-// Цвет для личных сообщений
-#define COLOR_PM "\033[38;5;206m"           // Ярко-розовый
+/* --- Specific Context Colors --- */
+#define COLOR_PM        "\033[38;5;206m" /**< Hot Pink - Private messages */
+#define COLOR_ACTION    "\033[38;5;178m" /**< Gold - Join/Leave/Disconnect events */
 
-// Цвет для действий (join/leave/disconnect)
-#define COLOR_ACTION "\033[38;5;178m"       // Золотистый
-
-#endif // COLORS_H
+#endif /* COLORS_H */
