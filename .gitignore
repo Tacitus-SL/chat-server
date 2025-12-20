@@ -1,1 +1,7 @@
 .idea
+build/
+deps/
+
+server
+client
+unit_tests
