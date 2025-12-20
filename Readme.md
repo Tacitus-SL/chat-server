@@ -75,6 +75,10 @@ Open a new terminal window for each client.
 ./build/client -p 8080 -a 127.0.0.1
 ```
 
+3. Shuttinh down
+To stop the server and disconnect all clients, press: `CTRL+C`
+
+
 **Step-by-step usage flow:**
 - **Server:** Start `./build/server -p 8080`
 - **Client 1:** Start `./build/client -p 8080 -a 127.0.0.1`
