@@ -67,6 +67,7 @@ sudo make install
 ```bash
 ./build/server -p 8080
 ```
+
 2. Starting the Client
 
 Open a new terminal window for each client.
