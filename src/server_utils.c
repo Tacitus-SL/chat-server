@@ -469,7 +469,7 @@ void handle_ping(int client_idx) {
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
 
-    snprintf(msg, sizeof(msg), COLOR_SERVER "[SERVER] PONG [%s]\n" COLOR_RESET, timestamp);
+    snprintf(msg, sizeof(msg), COLOR_SUCCESS "[SERVER] PONG [%s]\n" COLOR_RESET, timestamp);
     send_message(clients[client_idx].fd, msg);
 }
 
