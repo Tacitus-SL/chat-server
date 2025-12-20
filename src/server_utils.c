@@ -260,10 +260,6 @@ void handle_join(int client_idx, const char *room_name) {
 }
 
 void handle_leave(int client_idx) {
-    char msg[BUFFER_SIZE];
-    char timestamp[32];
-    const char *user_color;
-
     if (strlen(clients[client_idx].username) == 0) return;
 
     update_client_activity(client_idx);
