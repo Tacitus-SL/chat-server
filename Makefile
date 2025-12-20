@@ -1,10 +1,9 @@
 CC := gcc
-CFLAGS := -Iinclude -Wall -Wextra -std=c99 -pedantic -O2
+CFLAGS := -Isrc -Wall -Wextra -std=c99 -pedantic -O2
 LDFLAGS :=
 
 # Directories
 SRC_DIR := src
-INC_DIR := include
 BUILD_DIR := build
 DEPS_DIR := deps
 TEST_DIR := tests
@@ -14,7 +13,7 @@ SERVER_SRC := $(SRC_DIR)/server.c
 CLIENT_SRC := $(SRC_DIR)/client.c
 UTILS_SRC := $(SRC_DIR)/server_utils.c
 UNIT_TEST_SRC := $(TEST_DIR)/unit_tests.c
-HEADERS := $(wildcard $(INC_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
+HEADERS := $(wildcard $(SRC_DIR)/*.h)
 
 # Object files
 SERVER_OBJ := $(BUILD_DIR)/server.o $(BUILD_DIR)/server_utils.o
