@@ -3,33 +3,37 @@
 
 A simple networking application that enables real-time text communication between multiple users over a local network or the internet. The program allows users to create chat rooms or engage in one-on-one conversations, with features such as username selection, message timestamps, and basic command functionality for actions like joining or leaving chat rooms.
 
+## Code Style
+
+This project follows the **K&R (Kernighan and Ritchie)** coding style.
+
 ## Features
 
 1. Real-Time Messaging
 - **Description:**
   Users can send and receive messages instantly in shared chat rooms or private chats.
 - **Acceptance Criteria:**
-   - Messages appear immediately for all users in the same room.
-   - Each message includes a timestamp and the sender’s username.
-   - The program handles multiple clients concurrently.
+  - Messages appear immediately for all users in the same room.
+  - Each message includes a timestamp and the sender’s username.
+  - The program handles multiple clients concurrently.
 
 2. Chat Rooms Management
 - **Description:**
   Users can create, join, leave, and list available chat rooms.
 - **Acceptance Criteria:**
-   - A user can create a room with a unique name.
-   - A user can join any existing room.
-   - Leaving a room cleanly disconnects the user and broadcasts a status message.
-   - Users can list all active rooms.
+  - A user can create a room with a unique name.
+  - A user can join any existing room.
+  - Leaving a room cleanly disconnects the user and broadcasts a status message.
+  - Users can list all active rooms.
 
 3. Command System
 - **Description:**
-   Built-in commands provide enhanced control and navigation inside the chat application.
+  Built-in commands provide enhanced control and navigation inside the chat application.
 
 - **Acceptance Criteria:**
-   - Commands start with / (e.g., /join, /leave, /msg, /rooms).
-   - Unknown commands are gracefully rejected with a clear message.
-   - Command processing does not block message flow.
+  - Commands start with / (e.g., /join, /leave, /msg, /rooms).
+  - Unknown commands are gracefully rejected with a clear message.
+  - Command processing does not block message flow.
 
 ## Dependencies
 
@@ -54,7 +58,26 @@ make
 make test
 ```
 
-## Usage Examples
+4. System-wide Installation (Optional):
 ```bash
-bash ./program_name [arguments]
+sudo make install
 ```
+## Usage Examples
+1. Starting the Server
+```bash
+./build/server -p 8080
+```
+2. Starting the Client
+
+Open a new terminal window for each client.
+```bash
+./build/client -p 8080 -a 127.0.0.1
+```
+
+**Step-by-step usage flow:**
+- **Server:** Start `./build/server -p 8080`
+- **Client 1:** Start `./build/client -p 8080 -a 127.0.0.1`
+  - Type: `/name Alice`
+- **Client 2:** Start `./build/client -p 8080 -a 127.0.0.1`
+  - Type: `/name Bob`
+- **Chat:** Alice types "Hello!", Bob sees it instantly.
