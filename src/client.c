@@ -162,7 +162,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    printf("\nDisconnecting...\n");
     close(sock_fd);
     return 0;
 }

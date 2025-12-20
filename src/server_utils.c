@@ -200,6 +200,8 @@ void handle_setname(int client_idx, const char *username) {
              get_user_color(username), username, COLOR_SERVER);
     send_message(clients[client_idx].fd, msg);
 
+    send_room_history(client_idx, "lobby");
+
     get_timestamp(timestamp, sizeof(timestamp));
     snprintf(msg, sizeof(msg), COLOR_TIMESTAMP "[%s]" COLOR_RESET COLOR_ACTION " *** %s%s%s joined the lobby ***" COLOR_RESET "\n",
              timestamp, get_user_color(username), username, COLOR_ACTION);
@@ -469,7 +471,7 @@ void handle_ping(int client_idx) {
     char timestamp[32];
     get_timestamp(timestamp, sizeof(timestamp));
 
-    snprintf(msg, sizeof(msg), COLOR_SUCCESS "[SERVER] PONG [%s]\n" COLOR_RESET, timestamp);
+    snprintf(msg, sizeof(msg), COLOR_SUCCESS "[SERVER] PONG [%s]" COLOR_RESET "\n", timestamp);
     send_message(clients[client_idx].fd, msg);
 }
 
