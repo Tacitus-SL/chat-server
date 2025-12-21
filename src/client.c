@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include "protocol.h"
+#include "colors.h"
 
 /**
  * @file client.c
@@ -142,11 +143,31 @@ int main(int argc, char *argv[]) {
         /* --- User Input from Keyboard --- */
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             char buffer[BUFFER_SIZE];
+            int c;
             if (!fgets(buffer, sizeof(buffer), stdin)) {
                 continue;
             }
 
             size_t len = strlen(buffer);
+            if (len > 0 && buffer[len - 1] != '\n') {
+                printf(COLOR_ERROR "\n[WARNING] Message too long! Maximum length is %d characters.\n" COLOR_RESET, BUFFER_SIZE - 2);
+                printf("> ");
+                fflush(stdout);
+
+                while (1) {
+                    c = getchar();
+
+                    if (c == '\n') {
+                        break;
+                    }
+
+                    if (c == EOF) {
+                        break;
+                    }
+                }
+                continue;
+            }
+
             if (len > 0 && buffer[len - 1] == '\n') {
                 buffer[len - 1] = '\0';
             }
