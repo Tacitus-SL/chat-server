@@ -41,6 +41,9 @@ void sigint_handler(int sig) {
 /**
  * @brief Main server function.
  *
+ * Initializes the server socket, binds to the specified port, and enters
+ * the main event loop to handle client connections and messages.
+ *
  * @param argc Argument count.
  * @param argv Argument vector (expects -p <port>).
  * @return 0 on success, 1 on failure.
@@ -158,6 +161,7 @@ int main(int argc, char *argv[]) {
             if (client_fd >= 0) {
                 int added = 0;
                 int j;
+                char msg[BUFFER_SIZE];
                 for (j = 0; j < MAX_CLIENTS; j++) {
                     if (clients[j].fd == -1) {
                         clients[j].fd = client_fd;
@@ -165,7 +169,6 @@ int main(int argc, char *argv[]) {
                         clients[j].last_activity = time(NULL);
                         added = 1;
 
-                        char msg[BUFFER_SIZE];
                         snprintf(msg, sizeof(msg),
                                  COLOR_SERVER "[SERVER] Connected to chat server. Set your username with /name <username>" COLOR_RESET "\n");
                         send_message(client_fd, msg);
