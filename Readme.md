@@ -1,6 +1,6 @@
 # Text-Based Chat Program
 
-A simple networking application that enables real-time text communication between multiple users over a local network or the internet. The program allows users to create chat rooms or engage in one-on-one conversations, with features such as username selection, message timestamps, and basic command functionality for actions like joining or leaving chat rooms.
+A simple networking application written in C that enables real-time text communication between multiple users over a local network or the internet. The program allows users to create chat rooms or engage in one-on-one conversations, with features such as username selection, message timestamps, and basic command functionality for actions like joining or leaving chat rooms.
 
 ## Educational Project
 This is an examination project for Programming Fundamentals course at NUP 2025.
